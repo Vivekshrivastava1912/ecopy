@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #080C14;
+    color: #F8FAFC;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Custom Scrollbar for sleek dark look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F17;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F293D;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00FF87;
+}
+
+/* Custom Shredder Animations & Glow Effects */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(36, 48, 72, 0.6);
+}
+
+.glass-panel-glow {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  box-shadow: 0 0 20px -5px rgba(0, 255, 135, 0.2);
+}
+
+.neon-border-pulse {
+  border-color: #00FF87;
+  animation: borderPulse 2s infinite alternate;
+}
+
+@keyframes borderPulse {
+  0% {
+    box-shadow: 0 0 5px rgba(0, 255, 135, 0.2), inset 0 0 5px rgba(0, 255, 135, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.6), inset 0 0 10px rgba(0, 255, 135, 0.3);
+  }
+}
