@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd client && npm install && npm run build",
-    "start": "cd server && npm start"
+    "build": "node -e \"const fs=require('fs'); process.exit(fs.existsSync('client')?0:1)\" && (cd client && npm run build) || vite build",
+    "start": "node -e \"const fs=require('fs'); process.exit(fs.existsSync('server')?0:1)\" && (cd server && npm start) || node server.js"
   }
 }
