@@ -1,165 +1,154 @@
 import express from 'express';
 import PrintJob from '../models/PrintJob.js';
-import Kiosk from '../models/Kiosk.js';
 
 const router = express.Router();
 
 // @route   POST /api/print/upload-check
 // @desc    Validate file before processing
 router.post('/upload-check', (req, res) => {
-  const { fileName, fileSizeMB, fileType, isPasswordProtected } = req.body;
+  const { fileName, fileSizeMB } = req.body;
 
-  // 1. File size limit (>10MB) check
-  if (fileSizeMB > 10) {
+  if (fileSizeMB > 25) {
     return res.status(400).json({
       success: false,
       errorCode: 'FILE_TOO_LARGE',
-      message: `File size exceeds limit (${fileSizeMB.toFixed(1)}MB > 10MB). Please compress file before uploading.`
+      message: `File size exceeds limit (${fileSizeMB.toFixed(1)}MB > 25MB). Please compress file before uploading.`
     });
   }
 
-  // 2. Format validation (.pdf, .docx only)
-  const allowedExtensions = ['pdf', 'docx'];
-  const ext = fileName.split('.').pop().toLowerCase();
-  if (!allowedExtensions.includes(ext)) {
+  const allowedExtensions = ['pdf', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'txt'];
+  const ext = fileName?.split('.').pop().toLowerCase();
+  if (fileName && !allowedExtensions.includes(ext)) {
     return res.status(400).json({
       success: false,
       errorCode: 'INVALID_FORMAT',
-      message: `Format .${ext} is not supported. Exopy kiosks only support .pdf and .docx documents.`
-    });
-  }
-
-  // 3. Password protection check
-  if (isPasswordProtected) {
-    return res.json({
-      success: true,
-      requiresPassword: true,
-      message: 'Password-protected document detected. Client-side decryption required.'
+      message: `Format .${ext} is not supported. Supported: PDF, DOCX, PNG, JPG, WEBP, SVG.`
     });
   }
 
   res.json({
     success: true,
-    requiresPassword: false,
     message: 'File upload validated successfully.'
   });
 });
 
 // @route   POST /api/print/create-job
-// @desc    Calculate cost & create queued print job
+// @desc    Save uploaded document and print job configuration into MongoDB upon payment
 router.post('/create-job', async (req, res) => {
   try {
     const { 
-      kioskId, 
+      kioskId = 'EX-MAIN', 
       fileName, 
-      fileSizeMB, 
-      fileType, 
-      totalPages, 
-      pageRange, 
-      pagesToPrintCount, 
-      isColor, 
-      isDuplex, 
-      copies 
+      fileSizeMB = 1, 
+      fileType = 'pdf', 
+      totalPages = 1, 
+      pageRange = 'All', 
+      pagesToPrintCount = 1, 
+      isColor = false, 
+      rotation = 0,
+      filterMode = 'normal',
+      isDuplex = false, 
+      copies = 1,
+      totalCost = 2.0,
+      paymentMethod = 'UPI',
+      filePreviewData = ''
     } = req.body;
 
-    // Validate page range count
-    if (pagesToPrintCount > totalPages || pagesToPrintCount <= 0) {
-      return res.status(400).json({
-        success: false,
-        errorCode: 'INVALID_PAGE_RANGE',
-        message: `Invalid page range! Selected ${pagesToPrintCount} pages, but total document pages is ${totalPages}.`
-      });
-    }
-
-    // Fetch kiosk to verify color support
-    const kiosk = await Kiosk.findOne({ kioskId });
-    if (kiosk && !kiosk.supportsColor && isColor) {
-      return res.status(400).json({
-        success: false,
-        errorCode: 'COLOR_UNSUPPORTED',
-        message: `Kiosk ${kiosk.name} supports Black & White printing only.`
-      });
-    }
-
-    const rate = isColor ? 10.0 : 2.0;
-    const duplexMultiplier = isDuplex ? 0.85 : 1.0;
-    const totalCost = Number((pagesToPrintCount * rate * copies * duplexMultiplier).toFixed(2));
-
     const jobId = 'JOB-' + Math.random().toString(36).substring(2, 9).toUpperCase();
-    const queuePos = (kiosk ? kiosk.queueCount : 1) + 1;
+    const transactionId = 'TXN-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     const newJob = new PrintJob({
       jobId,
       kioskId,
-      fileName,
-      fileSizeMB,
+      fileName: fileName || 'Uploaded_Document.pdf',
+      fileSizeMB: Number(fileSizeMB) || 1,
       fileType,
-      totalPages,
+      totalPages: Number(totalPages) || 1,
       pageRange: pageRange || '1-' + totalPages,
-      pagesToPrintCount,
-      isColor: kiosk && !kiosk.supportsColor ? false : isColor,
-      isDuplex,
-      copies,
-      totalCost,
-      status: 'QUEUED',
-      queuePosition: queuePos,
-      paymentStatus: 'PENDING'
+      pagesToPrintCount: Number(pagesToPrintCount) || 1,
+      isColor: Boolean(isColor),
+      rotation: Number(rotation) || 0,
+      filterMode: filterMode || 'normal',
+      isDuplex: Boolean(isDuplex),
+      copies: Number(copies) || 1,
+      totalCost: Number(totalCost) || 2.0,
+      status: 'COMPLETED',
+      queuePosition: 1,
+      paymentStatus: 'SUCCESS',
+      paymentMethod,
+      transactionId,
+      filePreviewData: filePreviewData ? filePreviewData.substring(0, 1000000) : ''
     });
 
     await newJob.save();
+    console.log(`[Ecopy Server] Print job saved to MongoDB: ${newJob.jobId} (${newJob.fileName})`);
 
     res.json({
       success: true,
+      message: 'Print job data successfully saved to MongoDB database.',
       job: newJob
     });
   } catch (err) {
+    console.error('[Ecopy Server Error] create-job failed:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// @route   POST /api/print/simulate-paper-jam
-// @desc    Simulate kiosk paper jam hardware error & trigger refund
-router.post('/simulate-paper-jam', async (req, res) => {
-  const { jobId } = req.body;
+// @route   DELETE /api/print/job/:jobId
+// @desc    Permanently delete the document record from MongoDB when user confirms "YES" (Print Received)
+router.delete('/job/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+  try {
+    const deletedJob = await PrintJob.findOneAndDelete({ jobId });
+    console.log(`[Ecopy Server] Confirmed receipt. Document permanently deleted from MongoDB: ${jobId}`);
+
+    res.json({
+      success: true,
+      jobId,
+      deleted: !!deletedJob,
+      message: 'Document record and data successfully purged and deleted from MongoDB database for zero-trace privacy.'
+    });
+  } catch (err) {
+    console.error('[Ecopy Server Error] delete-job failed:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// @route   POST /api/print/report-failed
+// @desc    Mark print job as failed / issue reported when user clicks "NO" (Print Not Received)
+router.post('/report-failed', async (req, res) => {
+  const { jobId, reason = 'User reported printout not received' } = req.body;
   try {
     const job = await PrintJob.findOne({ jobId });
     if (job) {
-      job.status = 'FAILED_PAPER_JAM';
+      job.status = 'FAILED_TEST_CASE';
       job.paymentStatus = 'REFUNDED';
       await job.save();
     }
+
     res.json({
       success: true,
       jobId,
-      status: 'FAILED_PAPER_JAM',
-      refundInitiated: true,
-      supportWhatsapp: 'https://wa.me/919876543210?text=Exopy%20Paper%20Jam%20Issue%20Job%20' + jobId
+      status: 'FAILED_TEST_CASE',
+      message: 'Failure test case recorded. Support ticket created and refund flag activated.',
+      supportWhatsapp: 'https://wa.me/919876543210?text=Printout%20Not%20Received%20Job%20' + jobId
     });
   } catch (err) {
+    console.error('[Ecopy Server Error] report-failed failed:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// @route   POST /api/print/shred-document
-// @desc    Auto-delete and shred document from server memory for privacy
-router.post('/shred-document', async (req, res) => {
-  const { jobId } = req.body;
+// @route   GET /api/print/jobs
+// @desc    Get all print jobs from MongoDB
+router.get('/jobs', async (req, res) => {
   try {
-    const job = await PrintJob.findOne({ jobId });
-    if (job) {
-      job.status = 'SHREDDED_DELETED';
-      job.shreddedAt = new Date();
-      await job.save();
-    }
-    res.json({
-      success: true,
-      jobId,
-      shreddedAt: new Date(),
-      message: 'Document permanently shredded and wiped from cloud memory for maximum user privacy.'
-    });
+    const jobs = await PrintJob.find().sort({ createdAt: -1 }).limit(20);
+    res.json({ success: true, count: jobs.length, data: jobs });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 export default router;
+

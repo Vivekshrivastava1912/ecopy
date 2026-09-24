@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://vivekshrivastava1912_db_user:OX71IvYVdk94G4T5@cluster0.ptielji.mongodb.net/exopy?retryWrites=true&w=majority";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://copysupport01_db_user:PlSbN6jBaGZyUZ0m@cluster0.p02ss9y.mongodb.net/ecopy?retryWrites=true&w=majority";
 
 export const connectDB = async () => {
   try {
     const conn = await mongoose.connect(MONGO_URI);
-    console.log(`[Exopy Server] MongoDB Connected: ${conn.connection.host}`);
+    console.log(`[Ecopy Server] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`[Exopy Server Error] MongoDB Connection Failure: ${error.message}`);
-    // Non-fatal fallback for offline local mode if database connection has network restrictions
+    console.error(`[Ecopy Server Error] MongoDB Connection Failure: ${error.message}`);
   }
 };
+

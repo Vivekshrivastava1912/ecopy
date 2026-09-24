@@ -1,88 +1,56 @@
 import React from 'react';
-import { Printer, MapPin, History, ShieldAlert } from 'lucide-react';
 
-export default function Navbar({ selectedKiosk, onOpenHistory, onOpenKioskSelector, sessionMinutesLeft, isSessionExpired }) {
+export default function Navbar() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-dark-border/80 glass-panel">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.location.reload()}>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-neon to-emerald-600 flex items-center justify-center shadow-neon-sm text-black font-black">
-            <Printer className="w-5 h-5 text-black" />
+        {/* Professional Black & White SVG Logo */}
+        <div 
+          className="flex items-center gap-3 cursor-pointer group select-none" 
+          onClick={() => window.location.reload()}
+        >
+          {/* Professional Monochrome Vector SVG Logo */}
+          <div className="w-9 h-9 rounded-md bg-black text-white flex items-center justify-center shadow-sm">
+            <svg 
+              className="w-5 h-5" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              {/* Modern geometric printer icon */}
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8" rx="1"></rect>
+              <circle cx="18" cy="13" r="1" fill="currentColor"></circle>
+            </svg>
           </div>
+
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white font-mono">EXOPY</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold bg-neon/10 text-neon border border-neon/30">
-                INDORE
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-black tracking-tight text-slate-950 font-mono">ECOPY</span>
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">
+                Cloud
               </span>
             </div>
-            <p className="text-[9px] sm:text-[10px] text-slate-400 font-medium hidden xs:block">Automated Kiosk Network</p>
+            <p className="text-[10px] text-slate-500 font-medium">Smart Automated Print Engine</p>
           </div>
         </div>
 
-        {/* Selected Kiosk Pill & Actions */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          {/* Active Kiosk Status Badge with Pulse Dot */}
-          {selectedKiosk ? (
-            <button
-              onClick={onOpenKioskSelector}
-              className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
-                selectedKiosk.status === 'ONLINE'
-                  ? 'bg-slate-900/80 border-neon/40 text-slate-200 hover:border-neon'
-                  : 'bg-red-950/40 border-red-500/40 text-red-300 hover:border-red-400'
-              }`}
-            >
-              {/* Glowing Pulse Dot Icon */}
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  selectedKiosk.status === 'ONLINE' ? 'bg-neon' : 'bg-red-500'
-                }`}></span>
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                  selectedKiosk.status === 'ONLINE' ? 'bg-neon' : 'bg-red-500'
-                }`}></span>
-              </span>
-
-              {/* Text for desktop / compact token ID for mobile */}
-              <div className="text-left">
-                <span className="font-mono font-bold text-white text-[11px] block sm:hidden">{selectedKiosk.kioskId}</span>
-                <p className="font-semibold text-white truncate max-w-[120px] sm:max-w-[180px] hidden sm:block">{selectedKiosk.name}</p>
-                <p className="text-[10px] text-slate-400 hidden sm:block">{selectedKiosk.distanceMeters}m away • {selectedKiosk.supportsColor ? 'B&W + Color' : 'B&W Only'}</p>
-              </div>
-            </button>
-          ) : (
-            <button
-              onClick={onOpenKioskSelector}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neon/10 border border-neon/30 text-neon hover:bg-neon/20 text-xs font-semibold"
-            >
-              {/* Pulse Dot Button on Mobile */}
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-neon"></span>
-              </span>
-              <MapPin className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Select Kiosk</span>
-            </button>
-          )}
-
-          {/* Session Privacy Timer Indicator */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-dark-bg border border-dark-border text-[11px] text-slate-400" title="Security Timeout: Uploaded documents automatically clear after 30m of inactivity">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-            <span>Session: <span className="font-mono font-medium text-white">{sessionMinutesLeft}m</span></span>
+        {/* Minimal Right Indicator */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-black"></span>
+            <span className="text-[11px] font-mono font-semibold">ONLINE</span>
           </div>
-
-          {/* Print History Button */}
-          <button
-            onClick={onOpenHistory}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-elevated border border-dark-border hover:border-slate-500 text-xs text-slate-200 font-medium transition-colors"
-          >
-            <History className="w-4 h-4 text-neon" />
-            <span className="hidden sm:inline">Print History</span>
-          </button>
         </div>
 
       </div>
     </header>
   );
 }
+
+

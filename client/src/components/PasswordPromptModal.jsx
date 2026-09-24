@@ -19,7 +19,7 @@ export default function PasswordPromptModal({ isOpen, onClose, onUnlockSuccess, 
     setIsDecrypting(true);
     setErrorMsg('');
 
-    // Simulate password validation (Accepts '1234', 'password', 'exopy' or any password >= 4 chars)
+    // Simulate password validation (Accepts any password >= 3 chars)
     setTimeout(() => {
       setIsDecrypting(false);
       if (password.length < 3) {
@@ -29,70 +29,70 @@ export default function PasswordPromptModal({ isOpen, onClose, onUnlockSuccess, 
         setPassword('');
         onClose();
       }
-    }, 1000);
+    }, 800);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="max-w-md w-full glass-panel border border-amber-500/40 rounded-2xl p-6 shadow-amber-glow relative">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+      <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-5 sm:p-6 shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 p-1 rounded-md hover:bg-slate-100 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mb-4">
-          <Lock className="w-6 h-6 animate-pulse" />
+        <div className="w-10 h-10 rounded-md bg-black text-white flex items-center justify-center mb-3">
+          <Lock className="w-5 h-5" />
         </div>
 
-        <h3 className="text-lg font-extrabold text-white">Password Protected PDF</h3>
-        <p className="text-xs text-slate-400 mt-1">
-          <span className="text-amber-300 font-semibold truncate block max-w-xs">{fileName}</span>
+        <h3 className="text-lg font-black text-slate-950">Password Protected PDF</h3>
+        <p className="text-xs text-slate-500 mt-1">
+          <span className="text-slate-900 font-semibold truncate block max-w-xs">{fileName}</span>
           Enter password to decrypt on client-side before sending print payload.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Document Password</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Document Password</label>
             <div className="relative">
-              <Key className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <Key className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password..."
-                className="w-full bg-dark-bg border border-dark-border focus:border-amber-400 rounded-xl pl-9 pr-10 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-300 focus:border-black rounded-md pl-9 pr-10 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none transition-colors font-mono"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {errorMsg && <p className="text-xs text-red-400 font-medium mt-1">{errorMsg}</p>}
+            {errorMsg && <p className="text-xs text-red-600 font-medium mt-1">{errorMsg}</p>}
           </div>
 
-          <div className="p-3 rounded-xl bg-dark-bg/60 border border-dark-border text-[11px] text-slate-400 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-neon shrink-0" />
-            <span>Decryption is performed locally in browser. Password is never logged or stored.</span>
+          <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0" />
+            <span>Decryption is performed locally in browser. Password is never logged.</span>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="w-1/2 py-2.5 rounded-xl border border-dark-border text-slate-300 hover:bg-dark-hover text-xs font-semibold"
+              className="w-1/2 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isDecrypting}
-              className="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-1/2 py-2 rounded-md bg-black hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
             >
               {isDecrypting ? 'Decrypting...' : 'Decrypt PDF'}
             </button>
