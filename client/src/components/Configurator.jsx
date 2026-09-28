@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, Layers, Copy, Palette, Check, AlertCircle, Sparkles, Eye } from 'lucide-react';
+import { Settings, FileText, Layers, Copy, Palette, Check, AlertCircle, Sparkles, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Configurator({ 
   fileData, 
@@ -15,9 +15,13 @@ export default function Configurator({
   const [copies, setCopies] = useState(1);
   const [pageRangeError, setPageRangeError] = useState('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
+  const [previewPageIndex, setPreviewPageIndex] = useState(0);
+
+  const pagePreviewsList = fileData?.pagePreviews || fileData?.imagePreviewUrls || [];
 
   useEffect(() => {
     setIsLoadingPreview(true);
+    setPreviewPageIndex(0);
     const timer = setTimeout(() => {
       setIsLoadingPreview(false);
     }, 200);
@@ -137,8 +141,45 @@ export default function Configurator({
                   </div>
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                 </div>
+              ) : (pagePreviewsList[previewPageIndex] || fileData?.imagePreviewUrl || (fileData?.cloudinaryUrl ? (fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.jpg') : fileData.cloudinaryUrl) : null)) ? (
+                /* Crisp Responsive Document Preview (Works on Mobile & Desktop) */
+                <div className="w-full h-full flex flex-col items-center justify-center overflow-hidden relative">
+                  <img
+                    src={pagePreviewsList[previewPageIndex] || fileData?.imagePreviewUrl || (fileData?.cloudinaryUrl ? (fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.jpg') : fileData.cloudinaryUrl) : '')}
+                    alt={`Document Page ${previewPageIndex + 1}`}
+                    className="max-w-full max-h-full object-contain rounded shadow-sm select-none transition-all duration-200"
+                    style={{
+                      transform: `rotate(${editedConfig?.rotation || 0}deg)`,
+                      filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
+                    }}
+                  />
+                  {/* Page Navigation Controls if multi-page */}
+                  {pagePreviewsList.length > 1 && (
+                    <div className="absolute bottom-2 inset-x-2 flex items-center justify-between pointer-events-none">
+                      <button
+                        type="button"
+                        disabled={previewPageIndex === 0}
+                        onClick={(e) => { e.stopPropagation(); setPreviewPageIndex(prev => Math.max(0, prev - 1)); }}
+                        className="pointer-events-auto p-1.5 rounded-full bg-black/75 hover:bg-black text-white disabled:opacity-20 shadow-md backdrop-blur-xs transition-opacity cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="pointer-events-auto px-2.5 py-0.5 rounded-full bg-black/75 text-white text-[10px] font-mono shadow-md backdrop-blur-xs">
+                        Page {previewPageIndex + 1} of {pagePreviewsList.length}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={previewPageIndex >= pagePreviewsList.length - 1}
+                        onClick={(e) => { e.stopPropagation(); setPreviewPageIndex(prev => Math.min(pagePreviewsList.length - 1, prev + 1)); }}
+                        className="pointer-events-auto p-1.5 rounded-full bg-black/75 hover:bg-black text-white disabled:opacity-20 shadow-md backdrop-blur-xs transition-opacity cursor-pointer"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf')) ? (
-                /* Native Full PDF Document Viewer with Fit Scaling */
+                /* Fallback Native PDF Viewer */
                 <div 
                   className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200 relative"
                   style={{
@@ -146,25 +187,12 @@ export default function Configurator({
                   }}
                 >
                   <iframe
-                    src={`${fileData.dataUrl || fileData.cloudinaryUrl || fileData.imagePreviewUrl}#page=1&view=Fit&toolbar=0&navpanes=0&scrollbar=0`}
+                    src={`${fileData.dataUrl || fileData.cloudinaryUrl || fileData.imagePreviewUrl}#page=${previewPageIndex + 1}&view=Fit&toolbar=0&navpanes=0&scrollbar=0`}
                     className="w-full h-full rounded shadow-sm border-0"
                     style={{
                       filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
                     }}
                     title="PDF Live Preview"
-                  />
-                </div>
-              ) : fileData?.imagePreviewUrl || fileData?.cloudinaryUrl ? (
-                /* Live Image Preview */
-                <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                  <img
-                    src={fileData.imagePreviewUrl || fileData.cloudinaryUrl}
-                    alt="Document Preview"
-                    className="max-w-full max-h-full object-contain rounded shadow-sm"
-                    style={{
-                      transform: `rotate(${editedConfig?.rotation || 0}deg)`,
-                      filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
-                    }}
                   />
                 </div>
               ) : (
