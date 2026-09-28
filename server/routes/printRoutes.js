@@ -1,6 +1,7 @@
 import express from 'express';
 import PrintJob from '../models/PrintJob.js';
 import { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPageUrl } from '../config/cloudinary.js';
+import { connectDB } from '../config/db.js';
 
 const router = express.Router();
 
@@ -8,6 +9,7 @@ const router = express.Router();
 // @desc    Upload document / image to Cloudinary (applies B&W / Grayscale and rotation if selected)
 router.post('/upload-document', async (req, res) => {
   try {
+    await connectDB();
     const { fileData, fileName, fileSizeMB = 1, existingPublicId, filterMode = 'normal', rotation = 0, isBw = false } = req.body;
 
     if (!fileData) {
@@ -64,6 +66,7 @@ router.post('/upload-document', async (req, res) => {
 // @desc    Save print job configuration & Cloudinary references into MongoDB upon payment
 router.post('/create-job', async (req, res) => {
   try {
+    await connectDB();
     const { 
       kioskId = 'EX-MAIN', 
       fileName, 
@@ -169,6 +172,7 @@ router.post('/job/:jobId/confirm-received', async (req, res) => {
   const { jobId } = req.params;
   const { cloudinaryPublicId, cloudinaryUrl, cloudinaryPublicIds } = req.body || {};
   try {
+    await connectDB();
     const job = await PrintJob.findOne({ jobId });
 
     // Collect all public IDs and URL references from DB and request body
