@@ -12,12 +12,14 @@ export default function Configurator({
   const [pagesToPrint, setPagesToPrint] = useState(fileData ? fileData.totalPages : 1);
   const [isColor, setIsColor] = useState(false);
   const [isDuplex, setIsDuplex] = useState(false);
-  const [copies, setCopies] = useState(1);
-  const [pageRangeError, setPageRangeError] = useState('');
-  const [isLoadingPreview, setIsLoadingPreview] = useState(true);
-  const [previewPageIndex, setPreviewPageIndex] = useState(0);
+  const pagePreviewsList = (fileData?.pagePreviews || fileData?.imagePreviewUrls || []).filter(p => p && typeof p === 'string' && p.trim().length > 0);
+  
+  const rawImage = pagePreviewsList[previewPageIndex]
+    || (fileData?.imagePreviewUrl && !fileData.imagePreviewUrl.startsWith('data:application/pdf') ? fileData.imagePreviewUrl : null)
+    || (fileData?.cloudinaryUrl && !fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl : null)
+    || (fileData?.cloudinaryUrl && fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.jpg') : null);
 
-  const pagePreviewsList = fileData?.pagePreviews || fileData?.imagePreviewUrls || [];
+  const activePreviewImg = (rawImage && (rawImage.startsWith('data:image') || rawImage.startsWith('blob:') || rawImage.startsWith('http'))) ? rawImage : null;
 
   useEffect(() => {
     setIsLoadingPreview(true);
@@ -141,16 +143,19 @@ export default function Configurator({
                   </div>
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                 </div>
-              ) : (pagePreviewsList[previewPageIndex] || fileData?.imagePreviewUrl || (fileData?.cloudinaryUrl ? (fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.jpg') : fileData.cloudinaryUrl) : null)) ? (
+              ) : activePreviewImg ? (
                 /* Crisp Responsive Document Preview (Works on Mobile & Desktop) */
                 <div className="w-full h-full flex flex-col items-center justify-center overflow-hidden relative">
                   <img
-                    src={pagePreviewsList[previewPageIndex] || fileData?.imagePreviewUrl || (fileData?.cloudinaryUrl ? (fileData.cloudinaryUrl.endsWith('.pdf') ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.jpg') : fileData.cloudinaryUrl) : '')}
+                    src={activePreviewImg}
                     alt={`Document Page ${previewPageIndex + 1}`}
                     className="max-w-full max-h-full object-contain rounded shadow-sm select-none transition-all duration-200"
                     style={{
                       transform: `rotate(${editedConfig?.rotation || 0}deg)`,
                       filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
                     }}
                   />
                   {/* Page Navigation Controls if multi-page */}
@@ -178,7 +183,7 @@ export default function Configurator({
                     </div>
                   )}
                 </div>
-              ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf')) ? (
+              ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf') || fileData?.dataUrl) ? (
                 /* Fallback Native PDF Viewer */
                 <div 
                   className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200 relative"

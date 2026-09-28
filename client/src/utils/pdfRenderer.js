@@ -1,7 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Use standard Cloudflare CDN for worker to guarantee 100% compatibility across Vite dev and Vercel prod
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 /**
  * Extracts total pages and generates crisp image preview URLs for PDF pages
