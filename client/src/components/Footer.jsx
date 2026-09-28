@@ -55,7 +55,7 @@ export default function Footer() {
                 <Shield className="w-3.5 h-3.5 text-black" /> 100% Zero-Trace Policy
               </div>
               <p className="text-[11px] text-slate-500 leading-snug">
-                Your uploaded documents are permanently deleted from database upon confirmed print receipt.
+                Your uploaded files are permanently deleted from Cloudinary upon confirmed print receipt or timeout for 100% privacy.
               </p>
             </div>
           </div>
@@ -87,16 +87,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400 font-mono">
-          <p>© 2026 Ecopy Cloud Print Engine. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1 text-slate-600">
-              <Cpu className="w-3.5 h-3.5 text-slate-900" /> Powered by MongoDB Atlas
-            </span>
-            <span>•</span>
-            <span>English (EN-US)</span>
-          </div>
-        </div>
+      
       </div>
     </footer>
   );

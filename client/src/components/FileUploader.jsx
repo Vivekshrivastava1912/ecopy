@@ -57,56 +57,60 @@ export default function FileUploader({ onFileSelected, fileData, onClearFile, on
     const isEncrypted = mainFile.name.toLowerCase().includes('locked') || mainFile.name.toLowerCase().includes('password');
     const isImage = ['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext);
 
-    // Create preview URLs for single or multi images
-    let imagePreviewUrls = [];
+    // Create client object URLs as instant previews
+    let localPreviewUrls = [];
     if (isMultiImageBatch) {
-      imagePreviewUrls = imageFiles.map(f => URL.createObjectURL(f));
+      localPreviewUrls = imageFiles.map(f => URL.createObjectURL(f));
     } else if (isImage) {
-      imagePreviewUrls = [URL.createObjectURL(mainFile)];
+      localPreviewUrls = [URL.createObjectURL(mainFile)];
     }
 
-    // Progress Bar Simulation
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(30);
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 25;
-      setUploadProgress(progress);
+    // Read base64 file data locally
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setIsUploading(false);
+      alert('Could not read file. Please try again.');
+    };
 
-      if (progress >= 100) {
-        clearInterval(interval);
+    reader.onload = (readerEvent) => {
+      const fileBase64 = readerEvent.target.result;
+      setUploadProgress(100);
+
+      // Estimate or read pages (default 1 for images, or check bundle)
+      const totalPages = isMultiImageBatch ? imageFiles.length : isImage ? 1 : 1;
+
+      const processedFile = {
+        fileObj: mainFile,
+        name: isMultiImageBatch ? `${imageFiles.length}_Photos_Document_Bundle` : mainFile.name,
+        sizeMB: Number(sizeMB.toFixed(2)),
+        extension: isMultiImageBatch ? 'JPG BUNDLE' : ext,
+        isImage,
+        isMultiImage: isMultiImageBatch,
+        totalPages: totalPages,
+        pagePreviews: localPreviewUrls,
+        imagePreviewUrls: localPreviewUrls,
+        imagePreviewUrl: localPreviewUrls[0] || null,
+        dataUrl: fileBase64,
+        currentPageIndex: 0,
+        isEncrypted,
+        isUnlocked: !isEncrypted,
+        uploadedAt: new Date()
+      };
+
+      setTimeout(() => {
         setIsUploading(false);
-
-        const totalPages = isMultiImageBatch 
-          ? imageFiles.length 
-          : isImage 
-          ? 1 
-          : (mainFile.name.toLowerCase().includes('large') ? 12 : 3);
-
-        const processedFile = {
-          fileObj: mainFile,
-          name: isMultiImageBatch ? `${imageFiles.length}_Photos_Document_Bundle` : mainFile.name,
-          sizeMB: Number(sizeMB.toFixed(2)),
-          extension: isMultiImageBatch ? 'JPG BUNDLE' : ext,
-          isImage,
-          isMultiImage: isMultiImageBatch,
-          imagePreviewUrls,
-          imagePreviewUrl: imagePreviewUrls[0] || null,
-          totalPages,
-          currentPageIndex: 0,
-          isEncrypted,
-          isUnlocked: !isEncrypted,
-          uploadedAt: new Date()
-        };
-
         onFileSelected(processedFile);
 
         if (isEncrypted && onPromptPassword) {
           onPromptPassword(processedFile);
         }
-      }
-    }, 100);
+      }, 150);
+    };
+
+    reader.readAsDataURL(mainFile);
   };
 
   const handleDrop = (e) => {

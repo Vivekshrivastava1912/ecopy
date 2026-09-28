@@ -43,6 +43,16 @@ export default function PaymentModal({
   const executeSaveAndComplete = async () => {
     setPaymentState('SAVING_DB');
 
+    let finalCloudinaryUrl = fileData?.cloudinaryUrl || editedConfig?.updatedFileData?.cloudinaryUrl || editedConfig?.editedImageUrl || '';
+    let finalPublicId = fileData?.cloudinaryPublicId || editedConfig?.updatedFileData?.cloudinaryPublicId || '';
+
+    const isBwMode = !(config?.isColor) || editedConfig?.filterMode === 'bw' || editedConfig?.filterMode === 'scan';
+    if (isBwMode && finalCloudinaryUrl && !finalCloudinaryUrl.endsWith('.pdf') && !finalCloudinaryUrl.includes('/e_grayscale/')) {
+      finalCloudinaryUrl = finalCloudinaryUrl.replace('/upload/', '/upload/e_grayscale/');
+    } else if (!isBwMode && finalCloudinaryUrl && finalCloudinaryUrl.includes('/e_grayscale/')) {
+      finalCloudinaryUrl = finalCloudinaryUrl.replace('/upload/e_grayscale/', '/upload/');
+    }
+
     const payload = {
       kioskId: 'EX-MAIN',
       fileName: fileData ? fileData.name : 'document.pdf',
@@ -58,7 +68,10 @@ export default function PaymentModal({
       copies: config?.copies || 1,
       totalCost: config?.totalPrice || 2.00,
       paymentMethod: paymentMethod.toUpperCase(),
-      filePreviewData: fileData?.imagePreviewUrl || ''
+      cloudinaryUrl: finalCloudinaryUrl,
+      cloudinaryPublicId: finalPublicId,
+      cloudinaryResourceType: fileData?.cloudinaryResourceType || 'image',
+      filePreviewData: fileData?.dataUrl || finalCloudinaryUrl || fileData?.imagePreviewUrl || ''
     };
 
     try {
@@ -67,27 +80,37 @@ export default function PaymentModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.warn('Could not parse response JSON:', jsonErr);
+      }
 
-      const createdJob = data.job || {
+      const createdJob = data?.job || {
         jobId: 'JOB-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
         fileName: payload.fileName,
         pages: payload.pagesToPrintCount,
         cost: payload.totalCost,
         status: 'COMPLETED',
+        cloudinaryPublicId: finalPublicId,
+        cloudinaryUrl: finalCloudinaryUrl,
         createdAt: new Date().toLocaleString()
       };
 
       setPaymentState('IDLE');
       onPaymentSuccess(createdJob);
     } catch (err) {
-      console.warn('API error, falling back to local job creation', err);
+      console.warn('Network error, fallback job created:', err);
       const fallbackJob = {
         jobId: 'JOB-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
         fileName: payload.fileName,
         pages: payload.pagesToPrintCount,
         cost: payload.totalCost,
         status: 'COMPLETED',
+        cloudinaryPublicId: finalPublicId,
+        cloudinaryUrl: finalCloudinaryUrl,
         createdAt: new Date().toLocaleString()
       };
       setPaymentState('IDLE');
@@ -281,7 +304,7 @@ export default function PaymentModal({
           <div className="py-8 text-center space-y-3">
             <div className="w-10 h-10 mx-auto rounded-full border-3 border-slate-200 border-t-black animate-spin flex items-center justify-center"></div>
             <h4 className="text-sm font-bold text-slate-900">
-              {paymentState === 'SAVING_DB' ? 'Storing Document Data in MongoDB...' : 'Processing Secure Payment...'}
+              {paymentState === 'SAVING_DB' ? 'Uploading to Cloudinary & Syncing with MongoDB...' : 'Processing Secure Payment...'}
             </h4>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
               Please wait while your transaction is confirmed and registered.

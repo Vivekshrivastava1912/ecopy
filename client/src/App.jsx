@@ -52,12 +52,20 @@ export default function App() {
 
   const handleSaveEdit = (editedObj) => {
     setEditedConfig(editedObj);
+    if (editedObj?.updatedFileData) {
+      setFileData((prev) => ({
+        ...prev,
+        ...editedObj.updatedFileData,
+        cloudinaryUrl: editedObj.updatedFileData.cloudinaryUrl || prev?.cloudinaryUrl,
+        cloudinaryPublicId: editedObj.updatedFileData.cloudinaryPublicId || prev?.cloudinaryPublicId
+      }));
+    }
     setActiveStep('CONFIG');
   };
 
   const handlePaymentSuccess = (savedJob) => {
     setIsPaymentModalOpen(false);
-    
+
     const newJob = savedJob || {
       jobId: 'JOB-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
       fileName: fileData ? fileData.name : 'document.pdf',
@@ -80,39 +88,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      
+
       {/* Top Navbar */}
       <Navbar />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-        
+
         {/* 4-Step Responsive Workflow Step Indicator Bar with Minimal Radius */}
         <div className="w-full max-w-3xl mx-auto bg-white p-2 rounded-lg border border-slate-200 flex items-center justify-between text-xs font-semibold overflow-x-auto shadow-sm">
           <button
             onClick={() => setActiveStep('UPLOAD')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap cursor-pointer ${
-              activeStep === 'UPLOAD' 
-                ? 'bg-black text-white font-bold' 
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap cursor-pointer ${activeStep === 'UPLOAD'
+                ? 'bg-black text-white font-bold'
                 : 'text-slate-600 hover:text-black hover:bg-slate-100'
-            }`}
+              }`}
           >
             <Upload className="w-3.5 h-3.5" />
             <span>1. Upload</span>
           </button>
-          
+
           <div className="w-3 h-[1px] bg-slate-300 shrink-0"></div>
 
           <button
             disabled={!fileData}
             onClick={() => fileData && setActiveStep('EDIT')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-              activeStep === 'EDIT' 
-                ? 'bg-black text-white font-bold' 
-                : !fileData 
-                ? 'text-slate-300 cursor-not-allowed' 
-                : 'text-slate-600 hover:text-black hover:bg-slate-100 cursor-pointer'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${activeStep === 'EDIT'
+                ? 'bg-black text-white font-bold'
+                : !fileData
+                  ? 'text-slate-300 cursor-not-allowed'
+                  : 'text-slate-600 hover:text-black hover:bg-slate-100 cursor-pointer'
+              }`}
           >
             <Wand2 className="w-3.5 h-3.5" />
             <span>2. Rotate & Mode</span>
@@ -123,13 +129,12 @@ export default function App() {
           <button
             disabled={!fileData}
             onClick={() => fileData && setActiveStep('CONFIG')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-              activeStep === 'CONFIG' 
-                ? 'bg-black text-white font-bold' 
-                : !fileData 
-                ? 'text-slate-300 cursor-not-allowed' 
-                : 'text-slate-600 hover:text-black hover:bg-slate-100 cursor-pointer'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${activeStep === 'CONFIG'
+                ? 'bg-black text-white font-bold'
+                : !fileData
+                  ? 'text-slate-300 cursor-not-allowed'
+                  : 'text-slate-600 hover:text-black hover:bg-slate-100 cursor-pointer'
+              }`}
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>3. Custom Pages & Pay</span>
@@ -137,11 +142,10 @@ export default function App() {
 
           <div className="w-3 h-[1px] bg-slate-300 shrink-0"></div>
 
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-            activeStep === 'EXECUTION' 
-              ? 'bg-black text-white font-bold' 
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${activeStep === 'EXECUTION'
+              ? 'bg-black text-white font-bold'
               : 'text-slate-400'
-          }`}>
+            }`}>
             <CheckCheck className="w-3.5 h-3.5" />
             <span>4. Confirmation</span>
           </div>
@@ -207,7 +211,7 @@ export default function App() {
           <DocumentEditor
             fileData={fileData}
             editedConfig={editedConfig}
-            onSaveEdit={(editedObj) => setEditedConfig(editedObj)}
+            onSaveEdit={handleSaveEdit}
             onProceedNext={() => setActiveStep('CONFIG')}
           />
         )}
@@ -215,7 +219,7 @@ export default function App() {
         {/* STEP 3: CONFIGURATION & PAYMENT DASHBOARD */}
         {activeStep === 'CONFIG' && fileData && (
           <div className="space-y-5 animate-fade-in max-w-4xl mx-auto">
-            
+
             {/* Top Active File Bar */}
             <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
               <div className="flex items-center gap-3">
@@ -248,7 +252,7 @@ export default function App() {
           </div>
         )}
 
-        {/* STEP 4: INSTANT EXECUTION & 30S RECEIPT CONFIRMATION POPUP */}
+        {/* STEP 4: INSTANT EXECUTION & 5-MINUTE RECEIPT CONFIRMATION POPUP */}
         {activeStep === 'EXECUTION' && (
           <div className="animate-fade-in">
             <ExecutionScreen

@@ -1,11 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import kioskRoutes from './routes/kioskRoutes.js';
 import printRoutes from './routes/printRoutes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -24,10 +22,10 @@ app.use('/api/print', printRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ONLINE', 
-    system: 'Exopy Smart Kiosk API Engine', 
-    timestamp: new Date().toISOString() 
+  res.json({
+    status: 'ONLINE',
+    system: 'Exopy Smart Kiosk API Engine',
+    timestamp: new Date().toISOString()
   });
 });
 

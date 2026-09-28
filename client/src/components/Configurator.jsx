@@ -137,15 +137,33 @@ export default function Configurator({
                   </div>
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                 </div>
-              ) : fileData?.imagePreviewUrl ? (
+              ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf')) ? (
+                /* Native PDF Viewer with instant B&W / Color rendering */
+                <div 
+                  className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200"
+                  style={{
+                    filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
+                  }}
+                >
+                  <iframe
+                    src={`${fileData.dataUrl || fileData.imagePreviewUrl || fileData.cloudinaryUrl}#page=1&toolbar=0&navpanes=0`}
+                    className="w-full h-full rounded shadow-sm border-0"
+                    style={{
+                      filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
+                    }}
+                    title="PDF Live Preview"
+                  />
+                </div>
+              ) : fileData?.imagePreviewUrl || fileData?.cloudinaryUrl ? (
+                /* Live Image Preview */
                 <div className="w-full h-full flex items-center justify-center overflow-hidden">
                   <img
-                    src={fileData.imagePreviewUrl}
+                    src={fileData.imagePreviewUrl || fileData.cloudinaryUrl}
                     alt="Document Preview"
                     className="max-w-full max-h-full object-contain rounded shadow-sm"
                     style={{
                       transform: `rotate(${editedConfig?.rotation || 0}deg)`,
-                      filter: isColor ? 'none' : 'grayscale(100%)'
+                      filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
                     }}
                   />
                 </div>

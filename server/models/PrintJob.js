@@ -17,7 +17,17 @@ const printJobSchema = new mongoose.Schema({
   totalCost: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['QUEUED', 'PROCESSING', 'PRINTING', 'COMPLETED', 'FAILED_TEST_CASE', 'FAILED_PAPER_JAM', 'SHREDDED_DELETED'], 
+    enum: [
+      'QUEUED', 
+      'PROCESSING', 
+      'PRINTING', 
+      'COMPLETED', 
+      'COLLECTED_PURGED', 
+      'TIMEOUT_PURGED', 
+      'FAILED_TEST_CASE', 
+      'FAILED_PAPER_JAM', 
+      'SHREDDED_DELETED'
+    ], 
     default: 'QUEUED' 
   },
   queuePosition: { type: Number, default: 1 },
@@ -28,9 +38,21 @@ const printJobSchema = new mongoose.Schema({
   },
   paymentMethod: { type: String, default: 'UPI' },
   transactionId: { type: String },
-  filePreviewData: { type: String }, // Optional base64 preview or string
+  // Cloudinary storage fields
+  cloudinaryUrl: { type: String, default: '' },
+  cloudinaryPublicId: { type: String, default: '' },
+  cloudinaryPublicIds: [{ type: String }],
+  cloudinaryResourceType: { type: String, default: 'image' },
+  // User data purge & lifecycle tracking
+  isFilePurged: { type: Boolean, default: false },
+  purgedAt: { type: Date },
+  feedbackStatus: {
+    type: String,
+    enum: ['PENDING', 'CONFIRMED_RECEIVED', 'NOT_RECEIVED', 'TIMEOUT_NO_ACTION'],
+    default: 'PENDING'
+  },
+  filePreviewData: { type: String, default: '' }, // Cleared when purged
   shreddedAt: { type: Date }
 }, { timestamps: true });
 
 export default mongoose.models.PrintJob || mongoose.model('PrintJob', printJobSchema);
-

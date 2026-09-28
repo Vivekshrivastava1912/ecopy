@@ -15,13 +15,16 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
   const isImage = isMultiImage || fileData?.isImage || ['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(fileData?.extension?.toLowerCase());
   const totalPages = fileData ? fileData.totalPages : 1;
 
-  const currentImageUrl = isMultiImage
-    ? fileData.imagePreviewUrls[activePageIndex]
-    : fileData?.imagePreviewUrl;
+  const pagePreviews = fileData?.pagePreviews || fileData?.imagePreviewUrls || [];
+  const currentImageUrl = (pagePreviews && pagePreviews[activePageIndex]) 
+    || fileData?.imagePreviewUrl 
+    || fileData?.cloudinaryUrl;
 
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360);
   };
+
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const getFilterStyle = () => {
     let filterStr = `brightness(${brightness}%) contrast(${contrast}%)`;
@@ -41,18 +44,165 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
     return 'p-3 sm:p-4';
   };
 
-  const handleSaveAndNext = () => {
-    onSaveEdit({
-      rotation,
-      fitMode,
-      filterMode,
-      brightness,
-      contrast,
-      watermarkText,
-      marginSize,
-      previewFilterStyle: getFilterStyle()
-    });
-    if (onProceedNext) onProceedNext();
+  const handleSaveAndNext = async () => {
+    setIsProcessing(true);
+
+    try {
+      const isPdf = fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf');
+
+      let updatedCloudinaryUrl = '';
+      let updatedPublicId = '';
+      let editedDataUrl = fileData?.dataUrl || currentImageUrl || '';
+
+      if (isPdf) {
+        // PURE PDF UPLOAD: Upload original PDF data directly to Cloudinary without converting to image
+        try {
+          const uploadRes = await fetch('/api/print/upload-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fileData: fileData?.dataUrl,
+              fileName: fileData?.name || 'document.pdf',
+              fileSizeMB: fileData?.sizeMB || 1,
+              existingPublicId: fileData?.cloudinaryPublicId || '',
+              filterMode,
+              rotation,
+              isBw: filterMode === 'bw' || filterMode === 'scan'
+            })
+          });
+          if (uploadRes.ok) {
+            const cloudData = await uploadRes.json();
+            updatedCloudinaryUrl = cloudData.cloudinaryUrl;
+            updatedPublicId = cloudData.publicId;
+          }
+        } catch (pdfUploadErr) {
+          console.warn('PDF Cloudinary upload notice:', pdfUploadErr);
+        }
+      } else if (currentImageUrl) {
+        // IMAGE TRANSFORMATION: Render filters, rotation, and watermark onto HTML5 Canvas
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        const loadedImg = await new Promise((resolve) => {
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = currentImageUrl;
+        });
+
+        if (loadedImg) {
+          const isRotated90or270 = rotation === 90 || rotation === 270;
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          const naturalW = loadedImg.naturalWidth || loadedImg.width || 800;
+          const naturalH = loadedImg.naturalHeight || loadedImg.height || 1130;
+
+          canvas.width = isRotated90or270 ? naturalH : naturalW;
+          canvas.height = isRotated90or270 ? naturalW : naturalH;
+
+          // Background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Apply CSS Filters (Brightness, Contrast, Grayscale/BW)
+          ctx.filter = getFilterStyle();
+
+          // Transform & Rotate
+          ctx.save();
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate((rotation * Math.PI) / 180);
+          ctx.drawImage(loadedImg, -naturalW / 2, -naturalH / 2, naturalW, naturalH);
+          ctx.restore();
+
+          // Watermark
+          if (watermarkText && watermarkText.trim()) {
+            ctx.filter = 'none';
+            ctx.save();
+            ctx.font = `bold ${Math.max(28, Math.floor(canvas.width / 14))}px sans-serif`;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillText(watermarkText.trim().toUpperCase(), 0, 0);
+            ctx.restore();
+          }
+
+          editedDataUrl = canvas.toDataURL('image/png');
+
+          // Upload transformed image directly to Cloudinary (overwriting original)
+          try {
+            const uploadRes = await fetch('/api/print/upload-document', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileData: editedDataUrl,
+                fileName: fileData?.name || 'image.png',
+                fileSizeMB: fileData?.sizeMB || 1,
+                existingPublicId: fileData?.cloudinaryPublicId || '',
+                filterMode,
+                rotation,
+                isBw: filterMode === 'bw' || filterMode === 'scan'
+              })
+            });
+            if (uploadRes.ok) {
+              const cloudData = await uploadRes.json();
+              updatedCloudinaryUrl = cloudData.cloudinaryUrl;
+              updatedPublicId = cloudData.publicId;
+            }
+          } catch (uploadErr) {
+            console.warn('Edited image Cloudinary upload notice:', uploadErr);
+          }
+        }
+      }
+
+      const updatedPreviews = [...(fileData?.pagePreviews || [])];
+      if (updatedPreviews.length > activePageIndex) {
+        updatedPreviews[activePageIndex] = updatedCloudinaryUrl || editedDataUrl;
+      } else {
+        updatedPreviews[0] = updatedCloudinaryUrl || editedDataUrl;
+      }
+
+      const updatedFileData = {
+        ...fileData,
+        imagePreviewUrl: updatedCloudinaryUrl || editedDataUrl,
+        pagePreviews: updatedPreviews,
+        imagePreviewUrls: updatedPreviews,
+        cloudinaryUrl: updatedCloudinaryUrl || fileData?.cloudinaryUrl,
+        cloudinaryPublicId: updatedPublicId || fileData?.cloudinaryPublicId,
+        dataUrl: editedDataUrl
+      };
+
+      onSaveEdit({
+        rotation,
+        fitMode,
+        filterMode,
+        brightness,
+        contrast,
+        watermarkText,
+        marginSize,
+        previewFilterStyle: getFilterStyle(),
+        updatedFileData,
+        editedImageUrl: updatedCloudinaryUrl || editedDataUrl
+      });
+
+      if (onProceedNext) onProceedNext();
+    } catch (err) {
+      console.warn('Edit save fallback:', err);
+      onSaveEdit({
+        rotation,
+        fitMode,
+        filterMode,
+        brightness,
+        contrast,
+        watermarkText,
+        marginSize,
+        previewFilterStyle: getFilterStyle()
+      });
+      if (onProceedNext) onProceedNext();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -76,11 +226,21 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
 
         <button
           type="button"
+          disabled={isProcessing}
           onClick={handleSaveAndNext}
-          className="hidden sm:flex px-5 py-2 rounded-md bg-black hover:bg-zinc-800 text-white font-bold text-xs tracking-wider items-center justify-center gap-2 transition-colors cursor-pointer"
+          className="hidden sm:flex px-5 py-2 rounded-md bg-black hover:bg-zinc-800 text-white font-bold text-xs tracking-wider items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
         >
-          <FileCheck className="w-4 h-4" />
-          <span>PROCEED TO CONFIGURE</span>
+          {isProcessing ? (
+            <>
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+              <span>SAVING EDITS...</span>
+            </>
+          ) : (
+            <>
+              <FileCheck className="w-4 h-4" />
+              <span>PROCEED TO CONFIGURE</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -128,10 +288,10 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
             {/* Printable Content Frame */}
             <div className={`w-full h-full flex items-center justify-center relative overflow-hidden transition-all duration-200 ${getMarginClass()}`}>
               
-              {isImage && currentImageUrl ? (
+              {currentImageUrl ? (
                 <img
                   src={currentImageUrl}
-                  alt="Print Preview Page"
+                  alt={`Print Preview Page ${activePageIndex + 1}`}
                   className={`transition-all duration-200 ${
                     fitMode === 'fill' ? 'w-full h-full object-cover' : fitMode === 'fit' ? 'max-w-full max-h-full object-contain' : 'object-none'
                   }`}
@@ -379,11 +539,21 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
           <div className="pt-1">
             <button
               type="button"
+              disabled={isProcessing}
               onClick={handleSaveAndNext}
-              className="w-full py-3 rounded-md bg-black hover:bg-zinc-800 text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors"
+              className="w-full py-3 rounded-md bg-black hover:bg-zinc-800 text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors disabled:opacity-50"
             >
-              <FileCheck className="w-4 h-4" />
-              <span>CONFIRM & CONFIGURE PRINT</span>
+              {isProcessing ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                  <span>APPLYING FILTERS & SAVING TO CLOUDINARY...</span>
+                </>
+              ) : (
+                <>
+                  <FileCheck className="w-4 h-4" />
+                  <span>CONFIRM & CONFIGURE PRINT</span>
+                </>
+              )}
             </button>
           </div>
 

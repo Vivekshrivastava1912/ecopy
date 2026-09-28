@@ -56,12 +56,21 @@ export default function DocumentPreview({
             filter: isColor ? 'none' : 'grayscale(100%)'
           }}
         >
-          {fileData.isImage && fileData.previewUrl ? (
+          {(fileData.extension?.toLowerCase() === 'pdf' || fileData.name?.toLowerCase().endsWith('.pdf')) ? (
+            /* Direct PDF Page Viewer */
+            <div className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded">
+              <iframe
+                src={`${fileData.cloudinaryUrl || fileData.dataUrl}#page=${currentPage}&toolbar=0&navpanes=0`}
+                className="w-full h-full border-0 rounded"
+                title={`PDF Preview Page ${currentPage}`}
+              />
+            </div>
+          ) : (fileData.pagePreviews?.[currentPage - 1] || fileData.imagePreviewUrls?.[currentPage - 1] || fileData.imagePreviewUrl || fileData.cloudinaryUrl || fileData.previewUrl) ? (
             /* Image Preview */
             <div className="w-full h-full flex items-center justify-center overflow-hidden">
               <img
-                src={fileData.previewUrl}
-                alt="Document Preview"
+                src={fileData.pagePreviews?.[currentPage - 1] || fileData.imagePreviewUrls?.[currentPage - 1] || fileData.imagePreviewUrl || fileData.cloudinaryUrl || fileData.previewUrl}
+                alt={`Document Preview Page ${currentPage}`}
                 className="max-w-full max-h-full object-contain"
               />
             </div>
