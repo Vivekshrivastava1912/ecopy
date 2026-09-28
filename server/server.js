@@ -16,7 +16,28 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Ensure MongoDB is connected before handling API requests (Vercel Serverless support)
+// Health check endpoint (always accessible for diagnosis)
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'DISCONNECTED';
+  let dbError = null;
+  try {
+    await connectDB();
+    dbStatus = 'CONNECTED';
+  } catch (e) {
+    dbStatus = 'FAILED';
+    dbError = e.message;
+  }
+
+  res.json({
+    status: 'ONLINE',
+    dbStatus,
+    dbError,
+    system: 'Exopy Smart Kiosk API Engine',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Ensure MongoDB is connected before handling API print & kiosk requests
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -25,7 +46,7 @@ app.use(async (req, res, next) => {
     console.error('[DB Middleware Error]:', err.message);
     res.status(500).json({ 
       success: false, 
-      error: 'MongoDB connection failed. Please ensure MongoDB Atlas Network Access has 0.0.0.0/0 allowed.' 
+      error: `MongoDB connection error: ${err.message}` 
     });
   }
 });
@@ -33,15 +54,6 @@ app.use(async (req, res, next) => {
 // Routes
 app.use('/api/kiosks', kioskRoutes);
 app.use('/api/print', printRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ONLINE',
-    system: 'Exopy Smart Kiosk API Engine',
-    timestamp: new Date().toISOString()
-  });
-});
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
