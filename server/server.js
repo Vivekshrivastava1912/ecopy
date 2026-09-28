@@ -16,6 +16,20 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Ensure MongoDB is connected before handling API requests (Vercel Serverless support)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('[DB Middleware Error]:', err.message);
+    res.status(500).json({ 
+      success: false, 
+      error: 'MongoDB connection failed. Please ensure MongoDB Atlas Network Access has 0.0.0.0/0 allowed.' 
+    });
+  }
+});
+
 // Routes
 app.use('/api/kiosks', kioskRoutes);
 app.use('/api/print', printRoutes);
