@@ -131,9 +131,6 @@ export default function FileUploader({ onFileSelected, fileData, onClearFile, on
     reader.readAsDataURL(mainFile);
   };
 
-  reader.readAsDataURL(mainFile);
-};
-
 const handleDrop = (e) => {
   e.preventDefault();
   setIsDragging(false);
@@ -271,5 +268,6 @@ return (
     )}
   </div>
 );
+}
 
 
