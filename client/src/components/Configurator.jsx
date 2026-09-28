@@ -138,38 +138,21 @@ export default function Configurator({
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                 </div>
               ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf')) ? (
-                /* Native PDF Preview with 100% universal Phone & Laptop support */
+                /* Native Full PDF Document Viewer */
                 <div 
                   className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200"
                   style={{
                     filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
                   }}
                 >
-                  {((fileData.imagePreviewUrl && !fileData.imagePreviewUrl.startsWith('data:application/pdf') && !fileData.imagePreviewUrl.endsWith('.pdf')) || fileData.pagePreviews?.[0] || (fileData.cloudinaryUrl && fileData.cloudinaryUrl.includes('res.cloudinary.com'))) ? (
-                    <img
-                      src={
-                        (fileData.imagePreviewUrl && !fileData.imagePreviewUrl.startsWith('data:application/pdf') && !fileData.imagePreviewUrl.endsWith('.pdf'))
-                          ? fileData.imagePreviewUrl
-                          : fileData.pagePreviews?.[0]
-                          || (fileData.cloudinaryUrl ? fileData.cloudinaryUrl.replace(/\.pdf$/i, '.png') : fileData.dataUrl)
-                      }
-                      alt="PDF Live Preview"
-                      className="max-w-full max-h-full object-contain rounded shadow-sm"
-                      style={{
-                        transform: `rotate(${editedConfig?.rotation || 0}deg)`,
-                        filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
-                      }}
-                    />
-                  ) : (
-                    <iframe
-                      src={`${fileData.dataUrl || fileData.imagePreviewUrl || fileData.cloudinaryUrl}#page=1&toolbar=0&navpanes=0`}
-                      className="w-full h-full rounded shadow-sm border-0"
-                      style={{
-                        filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
-                      }}
-                      title="PDF Live Preview"
-                    />
-                  )}
+                  <iframe
+                    src={`${fileData.dataUrl || fileData.cloudinaryUrl || fileData.imagePreviewUrl}#page=1&toolbar=0&navpanes=0`}
+                    className="w-full h-full rounded shadow-sm border-0"
+                    style={{
+                      filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
+                    }}
+                    title="PDF Live Preview"
+                  />
                 </div>
               ) : fileData?.imagePreviewUrl || fileData?.cloudinaryUrl ? (
                 /* Live Image Preview */
