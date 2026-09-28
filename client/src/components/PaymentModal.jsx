@@ -71,7 +71,7 @@ export default function PaymentModal({
       cloudinaryUrl: finalCloudinaryUrl,
       cloudinaryPublicId: finalPublicId,
       cloudinaryResourceType: fileData?.cloudinaryResourceType || 'image',
-      filePreviewData: fileData?.dataUrl || finalCloudinaryUrl || fileData?.imagePreviewUrl || ''
+      filePreviewData: finalCloudinaryUrl || (fileData?.dataUrl && fileData.dataUrl.length < 2000000 ? fileData.dataUrl : '')
     };
 
     try {

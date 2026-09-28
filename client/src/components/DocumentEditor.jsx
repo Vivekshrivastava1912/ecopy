@@ -55,32 +55,34 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
       let editedDataUrl = fileData?.dataUrl || currentImageUrl || '';
 
       if (isPdf) {
-        // PURE PDF UPLOAD: Upload original PDF data directly to Cloudinary without converting to image
-        try {
-          const uploadRes = await fetch('/api/print/upload-document', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fileData: fileData?.dataUrl,
-              fileName: fileData?.name || 'document.pdf',
-              fileSizeMB: fileData?.sizeMB || 1,
-              existingPublicId: fileData?.cloudinaryPublicId || '',
-              filterMode,
-              rotation,
-              isBw: filterMode === 'bw' || filterMode === 'scan'
-            })
-          });
-          if (uploadRes.ok) {
-            const cloudData = await uploadRes.json();
-            updatedCloudinaryUrl = cloudData.cloudinaryUrl;
-            updatedPublicId = cloudData.publicId;
-            const previewPng = cloudData.mainPreviewUrl || cloudData.pagePreviews?.[0] || (cloudData.cloudinaryUrl ? cloudData.cloudinaryUrl.replace(/\.pdf$/i, '.png') : '');
-            if (previewPng) {
-              editedDataUrl = previewPng;
+        // PURE PDF UPLOAD: Upload original PDF data directly to Cloudinary if under payload limits
+        if (fileData?.dataUrl && fileData.dataUrl.length < 3500000) {
+          try {
+            const uploadRes = await fetch('/api/print/upload-document', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileData: fileData?.dataUrl,
+                fileName: fileData?.name || 'document.pdf',
+                fileSizeMB: fileData?.sizeMB || 1,
+                existingPublicId: fileData?.cloudinaryPublicId || '',
+                filterMode,
+                rotation,
+                isBw: filterMode === 'bw' || filterMode === 'scan'
+              })
+            });
+            if (uploadRes.ok) {
+              const cloudData = await uploadRes.json();
+              updatedCloudinaryUrl = cloudData.cloudinaryUrl;
+              updatedPublicId = cloudData.publicId;
+              const previewPng = cloudData.mainPreviewUrl || cloudData.pagePreviews?.[0] || (cloudData.cloudinaryUrl ? cloudData.cloudinaryUrl.replace(/\.pdf$/i, '.png') : '');
+              if (previewPng) {
+                editedDataUrl = previewPng;
+              }
             }
+          } catch (pdfUploadErr) {
+            console.warn('PDF Cloudinary upload notice:', pdfUploadErr);
           }
-        } catch (pdfUploadErr) {
-          console.warn('PDF Cloudinary upload notice:', pdfUploadErr);
         }
       } else if (currentImageUrl) {
         // IMAGE TRANSFORMATION: Render filters, rotation, and watermark onto HTML5 Canvas
@@ -94,12 +96,21 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
         });
 
         if (loadedImg) {
+          const rawW = loadedImg.naturalWidth || loadedImg.width || 800;
+          const rawH = loadedImg.naturalHeight || loadedImg.height || 1130;
+
+          // Scale down dimensions to max 1600px to maintain crisp quality while keeping payload < 400KB
+          const maxDim = 1600;
+          let scale = 1;
+          if (rawW > maxDim || rawH > maxDim) {
+            scale = maxDim / Math.max(rawW, rawH);
+          }
+          const naturalW = Math.round(rawW * scale);
+          const naturalH = Math.round(rawH * scale);
+
           const isRotated90or270 = rotation === 90 || rotation === 270;
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-
-          const naturalW = loadedImg.naturalWidth || loadedImg.width || 800;
-          const naturalH = loadedImg.naturalHeight || loadedImg.height || 1130;
 
           canvas.width = isRotated90or270 ? naturalH : naturalW;
           canvas.height = isRotated90or270 ? naturalW : naturalH;
@@ -122,7 +133,7 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
           if (watermarkText && watermarkText.trim()) {
             ctx.filter = 'none';
             ctx.save();
-            ctx.font = `bold ${Math.max(28, Math.floor(canvas.width / 14))}px sans-serif`;
+            ctx.font = `bold ${Math.max(24, Math.floor(canvas.width / 15))}px sans-serif`;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -132,30 +143,32 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
             ctx.restore();
           }
 
-          editedDataUrl = canvas.toDataURL('image/png');
+          editedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
-          // Upload transformed image directly to Cloudinary (overwriting original)
-          try {
-            const uploadRes = await fetch('/api/print/upload-document', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fileData: editedDataUrl,
-                fileName: fileData?.name || 'image.png',
-                fileSizeMB: fileData?.sizeMB || 1,
-                existingPublicId: fileData?.cloudinaryPublicId || '',
-                filterMode,
-                rotation,
-                isBw: filterMode === 'bw' || filterMode === 'scan'
-              })
-            });
-            if (uploadRes.ok) {
-              const cloudData = await uploadRes.json();
-              updatedCloudinaryUrl = cloudData.cloudinaryUrl;
-              updatedPublicId = cloudData.publicId;
+          // Upload transformed image directly to Cloudinary (overwriting original) if within size limits
+          if (editedDataUrl && editedDataUrl.length < 3500000) {
+            try {
+              const uploadRes = await fetch('/api/print/upload-document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fileData: editedDataUrl,
+                  fileName: fileData?.name || 'image.png',
+                  fileSizeMB: fileData?.sizeMB || 1,
+                  existingPublicId: fileData?.cloudinaryPublicId || '',
+                  filterMode,
+                  rotation,
+                  isBw: filterMode === 'bw' || filterMode === 'scan'
+                })
+              });
+              if (uploadRes.ok) {
+                const cloudData = await uploadRes.json();
+                updatedCloudinaryUrl = cloudData.cloudinaryUrl;
+                updatedPublicId = cloudData.publicId;
+              }
+            } catch (uploadErr) {
+              console.warn('Edited image Cloudinary upload notice:', uploadErr);
             }
-          } catch (uploadErr) {
-            console.warn('Edited image Cloudinary upload notice:', uploadErr);
           }
         }
       }

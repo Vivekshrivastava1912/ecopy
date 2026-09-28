@@ -138,15 +138,15 @@ export default function Configurator({
                   <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                 </div>
               ) : (fileData?.extension?.toLowerCase() === 'pdf' || fileData?.name?.toLowerCase().endsWith('.pdf')) ? (
-                /* Native Full PDF Document Viewer */
+                /* Native Full PDF Document Viewer with Fit Scaling */
                 <div 
-                  className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200"
+                  className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded transition-all duration-200 relative"
                   style={{
                     filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
                   }}
                 >
                   <iframe
-                    src={`${fileData.dataUrl || fileData.cloudinaryUrl || fileData.imagePreviewUrl}#page=1&toolbar=0&navpanes=0`}
+                    src={`${fileData.dataUrl || fileData.cloudinaryUrl || fileData.imagePreviewUrl}#page=1&view=Fit&toolbar=0&navpanes=0&scrollbar=0`}
                     className="w-full h-full rounded shadow-sm border-0"
                     style={{
                       filter: isColor ? 'none' : 'grayscale(100%) contrast(120%)'
