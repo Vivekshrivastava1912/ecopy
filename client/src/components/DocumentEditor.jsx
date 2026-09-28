@@ -74,6 +74,10 @@ export default function DocumentEditor({ fileData, editedConfig, onSaveEdit, onP
             const cloudData = await uploadRes.json();
             updatedCloudinaryUrl = cloudData.cloudinaryUrl;
             updatedPublicId = cloudData.publicId;
+            const previewPng = cloudData.mainPreviewUrl || cloudData.pagePreviews?.[0] || (cloudData.cloudinaryUrl ? cloudData.cloudinaryUrl.replace(/\.pdf$/i, '.png') : '');
+            if (previewPng) {
+              editedDataUrl = previewPng;
+            }
           }
         } catch (pdfUploadErr) {
           console.warn('PDF Cloudinary upload notice:', pdfUploadErr);
